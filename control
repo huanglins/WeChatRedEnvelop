@@ -1,0 +1,9 @@
+Package: cn.vincents.wechatredenvelop
+Name: WeChatRedEnvelop
+Depends: mobilesubstrate
+Version: 1.0
+Architecture: iphoneos-arm
+Description: 微信抢红包插件
+Maintainer: Vincent
+Author: Vincent
+Section: https://vincents.cn
