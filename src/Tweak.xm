@@ -1,10 +1,14 @@
-#import "WeChatRedEnvelop.h"
+#import "RevealUtil.h"
+#import "WeChatRedEnvelop.h"        // 相关头文件
+
 #import "WeChatRedEnvelopParam.h"
 #import "VHLRedEnvelopConfig.h"
 #import "VHLReceiveRedEnvelopOperation.h"
 #import "VHLRedEnvelopParamQueue.h"
 #import "VHLRedEnvelopTaskManager.h"
 #import "VHLSettingViewController.h"
+
+#import <CoreLocation/CoreLocation.h>
 
 %hook MicroMessengerAppDelegate
 
@@ -14,6 +18,10 @@
     //CContact *contact = [contactMgr getContactForSearchByName:@"gh_6e8bddcdfca3"];
     //[contactMgr addLocalContact:contact listType:2];
     //[contactMgr getContactsFromServer:@[contact]];
+
+    // 加载 Reveal 
+    RevealUtil *ru = [[RevealUtil alloc] init];
+    [ru startReveal];
 
     return %orig;
 }
@@ -196,7 +204,7 @@
     }
     
 }
-// 消息防撤回
+// ------------------------ 消息防撤回 ----------------------
 - (void)onRevokeMsg:(CMessageWrap *)arg1 {
     // 如果没有开启防撤回功能
     if (![VHLRedEnvelopConfig sharedConfig].revokeMessageEnable) {
@@ -246,6 +254,7 @@
 }
 
 %end
+// ------------------------ 修改微信运动 ----------------------
 // -----------------------------------------------------------------------------------------
 %hook WCDeviceStepObject
 /*
@@ -258,6 +267,53 @@
     return %orig;
 }
 %end
+// ------------------------ 修改微信定位 ----------------------
+// -----------------------------------------------------------------------------------------
+/*
+%hook CLLocation
+- (CLLocationCoordinate2D) coordinate{
+    if ([VHLRedEnvelopConfig sharedConfig].editWeLocationEnable) {
+        CGFloat lat = [VHLRedEnvelopConfig sharedConfig].editWeLocationLatitude;
+        CGFloat lng = [VHLRedEnvelopConfig sharedConfig].editWeLocationLongitude;
+        if (lat > 0.1 && lng > 0.1) {
+            CLLocationCoordinate2D newCoordinate;
+            newCoordinate.latitude = [VHLRedEnvelopConfig sharedConfig].editWeLocationLatitude;   // 新的latitude
+            newCoordinate.longitude = [VHLRedEnvelopConfig sharedConfig].editWeLocationLongitude; // 新的longitude
+            return newCoordinate;
+        } else {
+            return %orig;
+        }
+    }
+    return %orig;
+}
+%end
+*/
+
+%hook CLLocationManager
+- (void)startUpdatingLocation {
+    if ([VHLRedEnvelopConfig sharedConfig].editWeLocationEnable) {
+        CGFloat lat = [VHLRedEnvelopConfig sharedConfig].editWeLocationLatitude;
+        CGFloat lng = [VHLRedEnvelopConfig sharedConfig].editWeLocationLongitude;
+        if (lat < 0.1 || lng < 0.1) {
+            %orig;
+        } else {
+            CLLocation *tokyoLocation = [[CLLocation alloc] initWithLatitude:lat longitude:lng];
+            CLLocation *cantonLocation = [[CLLocation alloc] initWithLatitude:23.127444 longitude:113.257217];
+
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [self.delegate locationManager:self didUpdateToLocation:tokyoLocation fromLocation:cantonLocation];
+            });
+            #pragma clang diagnostic pop
+        } 
+    } else {
+        %orig;
+    }
+}
+%end
+
+// ------------------------ 微信小助手菜单 ----------------------
 // -----------------------------------------------------------------------------------------
 
 %hook NewSettingViewController
@@ -302,3 +358,109 @@
 }
 
 %end
+
+// ------------------------ 微信小视频 ----------------------
+// -----------------------------------------------------------------------------------------
+static  WCTimeLineViewController *WCTimelineVC = nil;
+
+%hook WCContentItemViewTemplateNewSight
+
+%new
+- (WCMediaItem *)SLSightDataItem
+{
+    id responder = self;
+    MMTableViewCell *SightCell = nil;
+    MMTableView *SightTableView = nil;
+    while (![responder isKindOfClass:NSClassFromString(@"WCTimeLineViewController")])
+    {
+        if ([responder isKindOfClass:NSClassFromString(@"MMTableViewCell")]){
+            SightCell = responder;
+        }
+        else if ([responder isKindOfClass:NSClassFromString(@"MMTableView")]){
+            SightTableView = responder;
+        }
+        responder = [responder nextResponder];
+    }
+    WCTimelineVC = responder;
+    if (!(SightCell&&SightTableView&&WCTimelineVC))
+    {
+        NSLog(@"iOSRE: Failed to get video object.");
+        return nil;
+    }
+    NSIndexPath *indexPath = [SightTableView indexPathForCell:SightCell];
+    int itemIndex = [WCTimelineVC calcDataItemIndex:[indexPath section]];
+    WCFacade *facade = [(MMServiceCenter *)[%c(MMServiceCenter) defaultCenter] getService: [%c(WCFacade) class]];
+    WCDataItem *dataItem = [facade getTimelineDataItemOfIndex:itemIndex];
+    WCContentItem *contentItem = dataItem.contentObj;
+    WCMediaItem *mediaItem = [contentItem.mediaList count] != 0 ? (contentItem.mediaList)[0] : nil;
+    return mediaItem;
+}
+
+%new
+- (void)SLSightSaveToDisk
+{
+    NSString *localPath = [[self SLSightDataItem] pathForSightData];
+    UISaveVideoAtPathToSavedPhotosAlbum(localPath, nil, nil, nil);
+}
+
+%new
+- (void)SLSightCopyUrl
+{
+    UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+    pasteboard.string = [self SLSightDataItem].dataUrl.url;
+}
+
+%new
+- (void)SLRetweetSight
+{
+    SightMomentEditViewController *editSightVC = [[%c(SightMomentEditViewController) alloc] init];
+    NSString *localPath = [[self SLSightDataItem] pathForSightData];
+    UIImage *image = [[self valueForKey:@"_sightView"] getImage];
+    [editSightVC setRealMoviePath:localPath];
+    [editSightVC setMoviePath:localPath];
+    [editSightVC setRealThumbImage:image];
+    [editSightVC setThumbImage:image];
+    [WCTimelineVC presentViewController:editSightVC animated:YES completion:^{
+
+    }];
+}
+
+%new
+- (void)SLSightSendToFriends
+{
+    [self sendSightToFriend];
+}
+
+
+- (void)onLongTouch
+{
+    UIMenuController *menuController = [UIMenuController sharedMenuController];
+    if (menuController.isMenuVisible) return;//防止出现menu闪屏的情况
+    [self becomeFirstResponder];
+    NSString *localPath = [[self iOSREMediaItemFromSight] pathForSightData];
+    BOOL isExist =[[NSFileManager defaultManager] fileExistsAtPath:localPath];
+    UIMenuItem *retweetMenuItem = [[UIMenuItem alloc] initWithTitle:@"朋友圈" action:@selector(SLRetweetSight)];
+    UIMenuItem *saveToDiskMenuItem = [[UIMenuItem alloc] initWithTitle:@"保存到相册" action:@selector(SLSightSaveToDisk)];
+    UIMenuItem *sendToFriendsMenuItem = [[UIMenuItem alloc] initWithTitle:@"好友" action:@selector(SLSightSendToFriends)];
+    UIMenuItem *copyURLMenuItem = [[UIMenuItem alloc] initWithTitle:@"复制链接" action:@selector(SLSightCopyUrl)];
+    if(isExist){
+        [menuController setMenuItems:@[retweetMenuItem,sendToFriendsMenuItem,saveToDiskMenuItem,copyURLMenuItem]];
+    }else{
+        [menuController setMenuItems:@[copyURLMenuItem]];
+    }
+    [menuController setTargetRect:CGRectZero inView:self];
+    [menuController setMenuVisible:YES animated:YES];
+}
+%end
+
+%hook SightMomentEditViewController
+
+- (void)popSelf
+{
+    [self dismissViewControllerAnimated:YES completion:^{
+
+    }];
+}
+
+%end
+

@@ -45,7 +45,7 @@
 }
 
 - (void)initTitle {
-    self.title = @"微信小助手";
+    self.title = @"微信运动";
     
     [self.navigationController.navigationBar setTitleTextAttributes:@{NSFontAttributeName: [UIFont boldSystemFontOfSize:18.0]}];
 }
@@ -88,7 +88,7 @@
 }
 - (void)handleStepCount:(UITextField *)sender
 {
-    NSInteger maxStep = 98800;
+    NSInteger maxStep = 100000;
 
     NSInteger step = sender.text.integerValue;
     if (step > maxStep)

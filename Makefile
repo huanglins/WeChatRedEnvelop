@@ -8,7 +8,7 @@ include theos/makefiles/common.mk
 SRC = $(wildcaard src/*.m)
 
 TWEAK_NAME = WeChatRedEnvelop
-WeChatRedEnvelop_FILES = $(wildcard src/*.m) src/Tweak.xm
+WeChatRedEnvelop_FILES = $(wildcard src/*.m) $(wildcard src/*.xm)
 WeChatRedEnvelop_FRAMEWORKS = UIKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk

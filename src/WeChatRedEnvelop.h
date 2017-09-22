@@ -191,8 +191,11 @@
 
 @end
 
-@interface MMTableView: UITableView
+@interface MMTableViewCell : UIView
+@end
 
+@interface MMTableView: UITableView
+- (id)indexPathForCell:(id)cell;
 @end
 
 #pragma mark - UI
@@ -327,5 +330,59 @@
 
 @property(nonatomic, weak) id <MultiSelectContactsViewControllerDelegate> m_delegate; // @synthesize m_delegate;
 
+@end
+
+#pragma mark - 微信小视频相关
+
+@interface WCUrl : NSObject
+@property(retain, nonatomic) NSString *url;
+@end
+
+@interface WCContentItem : NSObject
+@property(retain, nonatomic) NSMutableArray *mediaList;
+@end
+
+@interface WCDataItem : NSObject
+@property(retain, nonatomic) WCContentItem *contentObj;
+@end
+
+@interface WCMediaItem : NSObject
+@property(retain, nonatomic) WCUrl *dataUrl;
+- (id)pathForSightData;
+@end
+
+@interface WCFacade : NSObject
+- (id)getTimelineDataItemOfIndex:(long long)arg1;
+@end
+
+@interface WCSightView : UIView
+- (id)getImage;
+@end
+
+@interface WCContentItemViewTemplateNewSight : UIView {
+    WCSightView *_sightView;
+}
+- (WCMediaItem *)iOSREMediaItemFromSight;
+- (void)iOSREOnSaveToDisk;
+- (void)iOSREOnCopyURL;
+- (void)sendSightToFriend;
+- (WCMediaItem *)SLSightDataItem;
+@end
+
+@interface SightMomentEditViewController : UIViewController
+@property(retain, nonatomic) NSString *moviePath;
+@property(retain, nonatomic) NSString *realMoviePath;
+@property(retain, nonatomic) UIImage *thumbImage;
+@property(retain, nonatomic) UIImage *realThumbImage;
+- (void)makeInputController;
+@end
+
+@interface MMWindowController : NSObject
+- (id)initWithViewController:(id)arg1 windowLevel:(int)arg2;
+- (void)showWindowAnimated:(_Bool)arg1;
+@end
+
+@interface WCTimeLineViewController : UIViewController
+- (long long)calcDataItemIndex:(long long)arg1;
 @end
 

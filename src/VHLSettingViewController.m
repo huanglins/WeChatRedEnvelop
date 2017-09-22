@@ -9,6 +9,8 @@
 #import "VHLSettingViewController.h"
 #import "VHLSelectChatNamesViewController.h"
 #import "VHLSettingWeRunViewController.h"
+#import "VHLSettingLocationViewController.h"
+
 //
 #import "WeChatRedEnvelop.h"
 #import "VHLRedEnvelopConfig.h"
@@ -58,6 +60,7 @@
     [self addAdvanceSettingSection];    // 扩展功能
     [self addOtherSettingSection];      // 其他功能  消息防撤回
     [self addWeRunSettingSection];      // 微信运动
+    [self addEditLocationSection];      // 微信定位
 
 //    // 判断是否关注微信公众号
 //    CContactMgr *contactMgr = [[objc_getClass("MMServiceCenter") defaultCenter] getService:objc_getClass("CContactMgr")];
@@ -258,28 +261,7 @@
 - (void)settingMessageRevoke:(UISwitch *)revokeSwitch {
     [VHLRedEnvelopConfig sharedConfig].revokeMessageEnable = revokeSwitch.on;
 }
-#pragma mark - 微信运动
-/*
-    微信运动
-*/
-- (void)addWeRunSettingSection {
-    MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoHeader:@"微信运动"];
-    [sectionInfo addCell:[self createWeRunEnableCell]];
-    
-    [self.tableViewInfo addSection:sectionInfo];
-}
-- (MMTableViewSectionInfo *)createWeRunEnableCell {
-    return [objc_getClass("MMTableViewCellInfo") normalCellForSel:@selector(settingWeRunEnable) target:self title:@"微信运动设置" rightValue:@"" accessoryType:1];
-}
 
-- (void)settingWeRunEnable {
-    VHLSettingWeRunViewController *settingWeRunViewController = [VHLSettingWeRunViewController new];
-    [self.navigationController PushViewController:settingWeRunViewController animated:YES];
-}
-// - (void)handleStepCount:(UITextField *)sender
-// {
-//     [VHLRedEnvelopConfig sharedConfig].editWeRunStep = sender.text.integerValue;
-// }
 // -----------------------------------------------------------------------------
 #pragma mark - ProLimit
 
@@ -315,6 +297,66 @@
     return [objc_getClass("MMTableViewCellInfo") normalCellForTitle:@"消息防撤回" rightValue:@"未启用"];
 }
 
+#pragma mark - 微信运动
+/*
+    微信运动
+*/
+- (void)addWeRunSettingSection {
+    MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoHeader:@"微信运动"];
+    [sectionInfo addCell:[self createWeRunEnableCell]];
+    
+    [self.tableViewInfo addSection:sectionInfo];
+}
+- (MMTableViewSectionInfo *)createWeRunEnableCell {
+    return [objc_getClass("MMTableViewCellInfo") normalCellForSel:@selector(settingWeRunEnable) target:self title:@"微信运动设置" rightValue:@"" accessoryType:1];
+}
+
+- (void)settingWeRunEnable {
+    VHLSettingWeRunViewController *settingWeRunViewController = [VHLSettingWeRunViewController new];
+    [self.navigationController PushViewController:settingWeRunViewController animated:YES];
+}
+// - (void)handleStepCount:(UITextField *)sender
+// {
+//     [VHLRedEnvelopConfig sharedConfig].editWeRunStep = sender.text.integerValue;
+// }
+#pragma mark - 微信定位
+- (void)addEditLocationSection {
+    MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoHeader:@"微信定位"];
+    [sectionInfo addCell:[self createEditLocationEnableCell]];
+    
+    [self.tableViewInfo addSection:sectionInfo];
+}
+- (MMTableViewSectionInfo *)createEditLocationEnableCell {
+    return [objc_getClass("MMTableViewCellInfo") normalCellForSel:@selector(settingEditLocationEnable) target:self title:@"修改微信定位" rightValue:@"" accessoryType:1];
+}
+
+- (void)settingEditLocationEnable {
+    VHLSettingLocationViewController *settingLocationViewController = [VHLSettingLocationViewController new];
+    [self.navigationController PushViewController:settingLocationViewController animated:YES];
+}
+
+#pragma mark - Support - 微信打赏
+- (void)addSupportSection {
+    MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoDefaut];
+    
+    [sectionInfo addCell:[self createWeChatPayingCell]];
+    
+    [self.tableViewInfo addSection:sectionInfo];
+}
+
+- (MMTableViewCellInfo *)createWeChatPayingCell {
+    return [objc_getClass("MMTableViewCellInfo") normalCellForSel:@selector(payingToAuthor) target:self title:@"微信打赏" rightValue:@"by vincent." accessoryType:1];
+}
+
+- (void)payingToAuthor {
+    [self startLoadingNonBlock];
+    ScanQRCodeLogicController *scanQRCodeLogic = [[objc_getClass("ScanQRCodeLogicController") alloc] initWithViewController:self CodeType:3];
+    scanQRCodeLogic.fromScene = 2;
+    
+    NewQRCodeScanner *qrCodeScanner = [[objc_getClass("NewQRCodeScanner") alloc] initWithDelegate:scanQRCodeLogic CodeType:3];
+    [qrCodeScanner notifyResult:@"https://wx.tenpay.com/f2f?t=AQAAAH06J0ruhAAjLo5DaNHZOXw%3D" type:@"QR_CODE" version:6];
+}
+
 #pragma mark - About
 - (void)addAboutSection {
     MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoDefaut];
@@ -344,27 +386,4 @@
     MMWebViewController *webViewController = [[objc_getClass("MMWebViewController") alloc] initWithURL:blogUrl presentModal:NO extraInfo:nil];
     [self.navigationController PushViewController:webViewController animated:YES];
 }
-
-#pragma mark - Support - 微信打赏
-- (void)addSupportSection {
-    MMTableViewSectionInfo *sectionInfo = [objc_getClass("MMTableViewSectionInfo") sectionInfoDefaut];
-    
-    [sectionInfo addCell:[self createWeChatPayingCell]];
-    
-    [self.tableViewInfo addSection:sectionInfo];
-}
-
-- (MMTableViewCellInfo *)createWeChatPayingCell {
-    return [objc_getClass("MMTableViewCellInfo") normalCellForSel:@selector(payingToAuthor) target:self title:@"微信打赏" rightValue:@"by vincent." accessoryType:1];
-}
-
-- (void)payingToAuthor {
-    [self startLoadingNonBlock];
-    ScanQRCodeLogicController *scanQRCodeLogic = [[objc_getClass("ScanQRCodeLogicController") alloc] initWithViewController:self CodeType:3];
-    scanQRCodeLogic.fromScene = 2;
-    
-    NewQRCodeScanner *qrCodeScanner = [[objc_getClass("NewQRCodeScanner") alloc] initWithDelegate:scanQRCodeLogic CodeType:3];
-    [qrCodeScanner notifyResult:@"https://wx.tenpay.com/f2f?t=AQAAAH06J0ruhAAjLo5DaNHZOXw%3D" type:@"QR_CODE" version:6];
-}
-
 @end
